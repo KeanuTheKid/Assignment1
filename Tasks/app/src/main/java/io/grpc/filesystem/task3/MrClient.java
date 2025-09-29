@@ -1,8 +1,17 @@
-/*
- * Client program to request for map and reduce functions from the Server
- */
-
 package io.grpc.filesystem.task3;
+
+import io.grpc.ManagedChannel;
+import io.grpc.ManagedChannelBuilder;
+import io.grpc.stub.StreamObserver;
+
+import com.task3.proto.AssignJobGrpc;
+import com.task3.proto.MapInput;
+import com.task3.proto.MapOutput;
+import com.task3.proto.ReduceInput;
+import com.task3.proto.ReduceOutput;
+
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 import io.grpc.filesystem.task2.MapReduce;
 
@@ -49,7 +58,6 @@ public class MrClient {
         }
     }
 
-    public void requestMap(String ip, Integer portNumber, String inputFilePath, String outputFilePath) throws InterruptedException {
 
         /*
          1. Open a gRPC channel to the Map server using the IP and port.
@@ -61,10 +69,67 @@ public class MrClient {
          5. Call stream.onCompleted() to finish and wait for the server's response (for example, using a CountDownLatch).
          6. Close the gRPC channel after completion.
         */
+        public void requestMap(String ip, Integer portNumber, String inputFilePath, String outputFilePath) throws InterruptedException {
+            ManagedChannel channel = ManagedChannelBuilder
+                    .forAddress(ip, portNumber)
+                    .usePlaintext()
+                    .build();
 
-    }
+            try {
+                AssignJobGrpc.AssignJobStub stub = AssignJobGrpc.newStub(channel);
+                CountDownLatch latch = new CountDownLatch(1);
 
-    public int requestReduce(String ip, Integer portNumber, String inputFilePath, String outputFilePath) {
+                StreamObserver<MapOutput> responseObserver = new StreamObserver<MapOutput>() {
+                    @Override
+                    public void onNext(MapOutput value) {
+                        int status = value.getJobstatus();
+                        if (status == 2) {
+                            for (Map.Entry<String, Integer> e : jobStatus.entrySet()) {
+                                if (e.getValue() != null && e.getValue() == 1) {
+                                    e.setValue(2);
+                                }
+                            }
+                            System.out.println("Map tasks completed (status=2)");
+                        } else {
+                            System.out.println("Map task status: " + status);
+                        }
+                    }
+
+                    @Override
+                    public void onError(Throwable t) {
+                        System.err.println("Map stream error: " + t.getMessage());
+                        latch.countDown();
+                    }
+
+                    @Override
+                    public void onCompleted() {
+                        latch.countDown();
+                    }
+                };
+
+                StreamObserver<MapInput> requestObserver = stub.map(responseObserver);
+
+                for (Map.Entry<String, Integer> e : jobStatus.entrySet()) {
+                    if (e.getValue() != null && e.getValue() == 1) {
+                        MapInput req = MapInput.newBuilder()
+                                .setIp(ip)
+                                .setPort(portNumber)
+                                .setInputfilepath(e.getKey())
+                                .setOutputfilepath("")
+                                .build();
+                        requestObserver.onNext(req);
+                    }
+                }
+
+                requestObserver.onCompleted();
+                latch.await(10, TimeUnit.SECONDS);
+
+            } finally {
+                channel.shutdownNow().awaitTermination(5, TimeUnit.SECONDS);
+            }
+        }
+
+
 
         /*
          1. Open a gRPC channel to the Reduce server.
@@ -74,8 +139,35 @@ public class MrClient {
          5. Close the gRPC channel after completion.
          6. Return the job status (e.g., 2 for success).
         */
+        public int requestReduce(String ip, Integer portNumber, String inputFilePath, String outputFilePath) {
+            ManagedChannel channel = ManagedChannelBuilder
+                    .forAddress(ip, portNumber)
+                    .usePlaintext()
+                    .build();
 
-        return 0; // update this return statement
-    }
+            try {
+                AssignJobGrpc.AssignJobBlockingStub stub = AssignJobGrpc.newBlockingStub(channel);
+
+                ReduceInput req = ReduceInput.newBuilder()
+                        .setIp(ip)
+                        .setPort(portNumber)
+                        .setInputfilepath(inputFilePath)   // Ordner mit den map-Ergebnissen (Chunks)
+                        .setOutputfilepath(outputFilePath) // Endgültige Ausgabe
+                        .build();
+
+                ReduceOutput res = stub.reduce(req);
+                int status = res.getJobstatus();
+                System.out.println("Reduce task status: " + status);
+                return status;
+
+            } finally {
+                try {
+                    channel.shutdownNow().awaitTermination(5, TimeUnit.SECONDS);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+
 
 }
