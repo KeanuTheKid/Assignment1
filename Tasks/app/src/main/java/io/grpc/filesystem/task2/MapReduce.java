@@ -64,11 +64,11 @@ public class MapReduce {
      */
     public static String filterPunctuations(String line) {
         if (line == null) return "";
-        // Convert to lowercase
+        //lowercase
         String cleaned = line.toLowerCase();
-        // Remove all punctuation characters
+        //remove all punctuation characters
         cleaned = cleaned.replaceAll("\\p{Punct}", "");
-        // Collapse multiple spaces to single space and trim
+        //collapse multiple spaces to single space +trim
         cleaned = cleaned.replaceAll("\\s+", " ").trim();
         return cleaned;
     }
@@ -96,7 +96,7 @@ public class MapReduce {
         if (word == null || word.isEmpty()) {
             return false;
         }
-        // Return true if the word contains only alphanumeric characters (letters or digits)
+        // ret true if the word contains only letters or digits
         return word.matches("^[a-zA-Z0-9]+$");
     }
 
@@ -136,48 +136,45 @@ public class MapReduce {
      * @throws IOException If an error occurs during file I/O.
      */
     public static Map<String, Integer> collectWordCounts(String[] mapFiles) throws IOException {
-        // Create a HashMap to accumulate the total counts for each word
+        //accumulate the total counts for each word -> HashMap
         Map<String, Integer> wordCounts = new HashMap<>();
 
         if (mapFiles == null) {
-            return wordCounts; // Return empty map if input is null
+            return wordCounts; //ret empty map if input is null
         }
 
-        // Iterate over each map file path
         for (String mapFilePath : mapFiles) {
             if (mapFilePath == null) {
                 continue; // Skip null paths
             }
             File mapFile = new File(mapFilePath);
             if (!mapFile.exists() || !mapFile.isFile()) {
-                continue; // Skip non-existent or non-file paths
+                continue; // skip non-existent or non-file paths
             }
 
-            // Read each map file line by line
             try (BufferedReader br = new BufferedReader(new FileReader(mapFile))) {
                 String line;
                 while ((line = br.readLine()) != null) {
                     line = line.trim();
                     if (line.isEmpty()) {
-                        continue; // Skip empty lines
+                        continue; // skip empty lines
                     }
-                    // Split line into word and count on first colon
                     int colonIndex = line.indexOf(':');
                     if (colonIndex == -1) {
-                        continue; // Skip lines without colon
+                        continue; // skip lines without colon
                     }
                     String word = line.substring(0, colonIndex).trim();
                     String countStr = line.substring(colonIndex + 1).trim();
 
-                    // Parse count as integer, skip line if parsing fails
+                    // parse count as integer, skip line if parsing fails
                     int count;
                     try {
                         count = Integer.parseInt(countStr);
                     } catch (NumberFormatException e) {
-                        continue; // Skip malformed count
+                        continue; // skip malformed count
                     }
 
-                    // Accumulate count for the word
+                    // accumulate count for the word
                     wordCounts.put(word, wordCounts.getOrDefault(word, 0) + count);
                 }
             }
@@ -194,25 +191,24 @@ public class MapReduce {
      * @throws IOException If an error occurs during file I/O.
      */
     public static void reduce(String mapDirPath, String outputFilePath) throws IOException {
-        // List map files starting with "map" prefix (case-insensitive)
+        // list map files starting with "map" prefix (case-insensitive)
         File mapDir = new File(mapDirPath);
         File[] mapFiles = mapDir.listFiles((dir, name) -> name.toLowerCase().startsWith("map") && new File(dir, name).isFile());
 
-        // Handle null listing gracefully
+        //handle null listing gracefully
         if (mapFiles == null) {
             mapFiles = new File[0];
         }
 
-        // Build array of absolute paths for map files
+        //build array of absolute paths for map files
         String[] mapFilePaths = new String[mapFiles.length];
         for (int i = 0; i < mapFiles.length; i++) {
             mapFilePaths[i] = mapFiles[i].getAbsolutePath();
         }
 
-        // Aggregate counts from map files
         Map<String, Integer> aggregatedCounts = collectWordCounts(mapFilePaths);
 
-        // Sort entries by count descending, then word ascending
+        // sort entries by count descending, then word ascending
         List<Map.Entry<String, Integer>> sortedEntries = new ArrayList<>(aggregatedCounts.entrySet());
         sortedEntries.sort((e1, e2) -> {
             int cmp = Integer.compare(e2.getValue(), e1.getValue()); // descending count
@@ -222,7 +218,7 @@ public class MapReduce {
             return e1.getKey().compareTo(e2.getKey()); // ascending word
         });
 
-        // Write sorted results to output file
+        // write sorted results to output file
         try (BufferedWriter bw = new BufferedWriter(new FileWriter(outputFilePath))) {
             for (Map.Entry<String, Integer> entry : sortedEntries) {
                 bw.write(entry.getKey() + ":" + entry.getValue());
@@ -239,7 +235,7 @@ public class MapReduce {
      * @throws IOException If an error occurs during file I/O.
      */
     public static void storeFinalCounts(java.util.Map<String, Integer> wordCounts, String outputFilePath) throws java.io.IOException {
-        // Handle null input by creating an empty output file
+        // handle null input by creating an empty output file
         if (wordCounts == null) {
             try (java.io.BufferedWriter bw = new java.io.BufferedWriter(new java.io.FileWriter(outputFilePath))) {
                 // nothing to write
@@ -247,11 +243,11 @@ public class MapReduce {
             return;
         }
 
-        // Create a list from the map entries
+        //create a list from the map entries
         java.util.List<java.util.Map.Entry<String, Integer>> entries =
                 new java.util.ArrayList<>(wordCounts.entrySet());
 
-        // Sort by count descending, then word ascending
+        // sort by count descending, then word ascending
         entries.sort((e1, e2) -> {
             int cmp = Integer.compare(e2.getValue(), e1.getValue());
             if (cmp != 0) return cmp;
@@ -275,7 +271,7 @@ public class MapReduce {
         String inputFilePath = args[0];
         String outputFilePath = args[1];
 
-        // Split input file into chunks
+        // split input file into chunks
         String chunkDirPath = makeChunks(inputFilePath);
 
         // Map phase: Process each chunk
