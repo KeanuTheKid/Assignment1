@@ -8,7 +8,7 @@ package io.grpc.filesystem.task2;
 
 import java.io.*;
 import java.nio.charset.Charset;
-import java.util.Map;
+import java.util.*;
 
 public class MapReduce {
 
@@ -56,17 +56,21 @@ public class MapReduce {
     }
 
     /**
-     * Filters punctuations from the given line of text.
+     * Removes all punctuation from the given line, converts it to lowercase,
+     * trims leading/trailing whitespace, and collapses multiple spaces to a single space.
      *
      * @param line The line of text to be filtered.
-     * @return The filtered line of text.
+     * @return The filtered (cleaned) line of text.
      */
     public static String filterPunctuations(String line) {
-        /*
-         * Insert your code here.
-         * Remove any punctuation from the line using regex like "\\p{Punct}".
-         */
-        return null; // Replace with the filtered line
+        if (line == null) return "";
+        // Convert to lowercase
+        String cleaned = line.toLowerCase();
+        // Remove all punctuation characters
+        cleaned = cleaned.replaceAll("\\p{Punct}", "");
+        // Collapse multiple spaces to single space and trim
+        cleaned = cleaned.replaceAll("\\s+", " ").trim();
+        return cleaned;
     }
 
     /**
@@ -76,11 +80,10 @@ public class MapReduce {
      * @return An array of words from the input line.
      */
     public static String[] splitTextIntoWords(String line) {
-        /*
-         * Insert your code here.
-         * Split the text using regex like "\\s+" to extract words.
-         */
-        return null; // Replace with an array of words
+        if (line == null || line.trim().isEmpty()) {
+            return new String[0];
+        }
+        return line.trim().split("\\s+");
     }
 
     /**
@@ -90,11 +93,11 @@ public class MapReduce {
      * @return True if the word is valid, false otherwise.
      */
     public static boolean isValidWord(String word) {
-        /*
-         * Insert your code here.
-         * Use regex to ensure the word is valid (e.g., "^[a-zA-Z0-9]+$").
-         */
-        return false; // Replace with actual condition
+        if (word == null || word.isEmpty()) {
+            return false;
+        }
+        // Return true if the word contains only alphanumeric characters (letters or digits)
+        return word.matches("^[a-zA-Z0-9]+$");
     }
 
     /**
@@ -104,12 +107,25 @@ public class MapReduce {
      * @throws IOException If an error occurs during file I/O.
      */
     public static void map(String inputFilePath) throws IOException {
+        // Map phase: Read the input chunk line by line, clean and split into words,
+        // then write each valid word with a count of one to a map output file.
+        File inputFile = new File(inputFilePath);
+        File outputFile = new File(inputFile.getParent(), "map-" + inputFile.getName());
 
-        /*
-         * Insert your code here.
-         * Use filterPunctuations, splitTextIntoWords, isValidWord, and mapWordToCount functions to map the words.
-         * Save the map output in a file named "map-chunk001" in the folder of the inputFilePath.
-         */
+        try (BufferedReader br = new BufferedReader(new FileReader(inputFile));
+             BufferedWriter bw = new BufferedWriter(new FileWriter(outputFile))) {
+            String line;
+            while ((line = br.readLine()) != null) {
+                String filteredLine = filterPunctuations(line);
+                String[] words = splitTextIntoWords(filteredLine);
+                for (String word : words) {
+                    if (isValidWord(word)) {
+                        bw.write(word + ":1");
+                        bw.newLine();
+                    }
+                }
+            }
+        }
     }
 
     /**
@@ -120,11 +136,54 @@ public class MapReduce {
      * @throws IOException If an error occurs during file I/O.
      */
     public static Map<String, Integer> collectWordCounts(String[] mapFiles) throws IOException {
-        /*
-         * Insert your code here.
-         * Parse the map files to extract word-count pairs and return them in a map.
-         */
-        return null; // Replace with actual word count map
+        // Create a HashMap to accumulate the total counts for each word
+        Map<String, Integer> wordCounts = new HashMap<>();
+
+        if (mapFiles == null) {
+            return wordCounts; // Return empty map if input is null
+        }
+
+        // Iterate over each map file path
+        for (String mapFilePath : mapFiles) {
+            if (mapFilePath == null) {
+                continue; // Skip null paths
+            }
+            File mapFile = new File(mapFilePath);
+            if (!mapFile.exists() || !mapFile.isFile()) {
+                continue; // Skip non-existent or non-file paths
+            }
+
+            // Read each map file line by line
+            try (BufferedReader br = new BufferedReader(new FileReader(mapFile))) {
+                String line;
+                while ((line = br.readLine()) != null) {
+                    line = line.trim();
+                    if (line.isEmpty()) {
+                        continue; // Skip empty lines
+                    }
+                    // Split line into word and count on first colon
+                    int colonIndex = line.indexOf(':');
+                    if (colonIndex == -1) {
+                        continue; // Skip lines without colon
+                    }
+                    String word = line.substring(0, colonIndex).trim();
+                    String countStr = line.substring(colonIndex + 1).trim();
+
+                    // Parse count as integer, skip line if parsing fails
+                    int count;
+                    try {
+                        count = Integer.parseInt(countStr);
+                    } catch (NumberFormatException e) {
+                        continue; // Skip malformed count
+                    }
+
+                    // Accumulate count for the word
+                    wordCounts.put(word, wordCounts.getOrDefault(word, 0) + count);
+                }
+            }
+        }
+
+        return wordCounts;
     }
 
     /**
@@ -135,12 +194,41 @@ public class MapReduce {
      * @throws IOException If an error occurs during file I/O.
      */
     public static void reduce(String mapDirPath, String outputFilePath) throws IOException {
+        // List map files starting with "map" prefix (case-insensitive)
+        File mapDir = new File(mapDirPath);
+        File[] mapFiles = mapDir.listFiles((dir, name) -> name.toLowerCase().startsWith("map") && new File(dir, name).isFile());
 
-        /*
-         * Insert your code here.
-         * Use collectWordCounts and aggregateWordCounts functions to aggregate word counts.
-         * Save the output to the specified outputFilePath.
-         */
+        // Handle null listing gracefully
+        if (mapFiles == null) {
+            mapFiles = new File[0];
+        }
+
+        // Build array of absolute paths for map files
+        String[] mapFilePaths = new String[mapFiles.length];
+        for (int i = 0; i < mapFiles.length; i++) {
+            mapFilePaths[i] = mapFiles[i].getAbsolutePath();
+        }
+
+        // Aggregate counts from map files
+        Map<String, Integer> aggregatedCounts = collectWordCounts(mapFilePaths);
+
+        // Sort entries by count descending, then word ascending
+        List<Map.Entry<String, Integer>> sortedEntries = new ArrayList<>(aggregatedCounts.entrySet());
+        sortedEntries.sort((e1, e2) -> {
+            int cmp = Integer.compare(e2.getValue(), e1.getValue()); // descending count
+            if (cmp != 0) {
+                return cmp;
+            }
+            return e1.getKey().compareTo(e2.getKey()); // ascending word
+        });
+
+        // Write sorted results to output file
+        try (BufferedWriter bw = new BufferedWriter(new FileWriter(outputFilePath))) {
+            for (Map.Entry<String, Integer> entry : sortedEntries) {
+                bw.write(entry.getKey() + ":" + entry.getValue());
+                bw.newLine();
+            }
+        }
     }
 
     /**
@@ -150,11 +238,33 @@ public class MapReduce {
      * @param outputFilePath The file to store the sorted word counts.
      * @throws IOException If an error occurs during file I/O.
      */
-    public static void storeFinalCounts(Map<String, Integer> wordCounts, String outputFilePath) throws IOException {
-        /*
-         * Insert your code here.
-         * Sort the wordCounts map and write it to the output file.
-         */
+    public static void storeFinalCounts(java.util.Map<String, Integer> wordCounts, String outputFilePath) throws java.io.IOException {
+        // Handle null input by creating an empty output file
+        if (wordCounts == null) {
+            try (java.io.BufferedWriter bw = new java.io.BufferedWriter(new java.io.FileWriter(outputFilePath))) {
+                // nothing to write
+            }
+            return;
+        }
+
+        // Create a list from the map entries
+        java.util.List<java.util.Map.Entry<String, Integer>> entries =
+                new java.util.ArrayList<>(wordCounts.entrySet());
+
+        // Sort by count descending, then word ascending
+        entries.sort((e1, e2) -> {
+            int cmp = Integer.compare(e2.getValue(), e1.getValue());
+            if (cmp != 0) return cmp;
+            return e1.getKey().compareTo(e2.getKey());
+        });
+
+        // Write sorted entries to output file
+        try (java.io.BufferedWriter bw = new java.io.BufferedWriter(new java.io.FileWriter(outputFilePath))) {
+            for (java.util.Map.Entry<String, Integer> entry : entries) {
+                bw.write(entry.getKey() + ":" + entry.getValue());
+                bw.newLine();
+            }
+        }
     }
 
     public static void main(String[] args) throws IOException { // update the main function if required
