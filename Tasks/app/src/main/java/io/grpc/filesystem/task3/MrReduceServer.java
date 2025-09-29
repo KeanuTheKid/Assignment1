@@ -46,18 +46,17 @@ public class MrReduceServer {
         @Override
         public void reduce(ReduceInput request, StreamObserver<ReduceOutput> responseObserver) {
             try {
-                // Extract paths from client request
                 String inputDirPath = request.getInputfilepath();
                 String outputFilePath = request.getOutputfilepath();
 
                 System.out.println("[ReduceServer] Received reduce request:\n  inputDir=" + inputDirPath + "\n  outputFile=" + outputFilePath);
 
-                // Perform reduce using Task 2 implementation
+                //Task 2 implementation
                 MapReduce.reduce(inputDirPath, outputFilePath);
 
                 System.out.println("[ReduceServer] Reduce finished successfully.");
 
-                // Reply success (2 = completed)
+                //Reply success (2 = completed)
                 ReduceOutput out = ReduceOutput.newBuilder()
                         .setJobstatus(2)
                         .build();
@@ -65,7 +64,7 @@ public class MrReduceServer {
                 responseObserver.onCompleted();
             } catch (Exception e) {
                 System.err.println("[ReduceServer] Reduce failed: " + e.getMessage());
-                // Return failure status instead of onError to keep client-side clean
+                //keep client-side clean
                 ReduceOutput out = ReduceOutput.newBuilder()
                         .setJobstatus(1)
                         .build();
