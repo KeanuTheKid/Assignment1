@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="io.grpc.filesystem.task2.MapReduceTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2025-09-29T14:32:57" hostname="eduroamstud-10-255-155-172.unisg.ch" time="0.012">
+<testsuite name="io.grpc.filesystem.task2.MapReduceTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2025-09-30T12:45:07" hostname="Flurina's-MacBookPro" time="0.013">
   <properties/>
-  <testcase name="testReduceFunction()" classname="io.grpc.filesystem.task2.MapReduceTest" time="0.005"/>
+  <testcase name="testReduceFunction()" classname="io.grpc.filesystem.task2.MapReduceTest" time="0.006"/>
   <testcase name="testStoreFinalCounts()" classname="io.grpc.filesystem.task2.MapReduceTest" time="0.001"/>
   <testcase name="testIsValidWord()" classname="io.grpc.filesystem.task2.MapReduceTest" time="0.001"/>
   <testcase name="testFilterPunctuations()" classname="io.grpc.filesystem.task2.MapReduceTest" time="0.001"/>

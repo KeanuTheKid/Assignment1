@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<module external.linked.project.id=":app" external.linked.project.path="$MODULE_DIR$/../../../../../../../../../../../OneDrive-Persönlich/Documents/Uni_St.Gallen/BCS/3.Semester/Distributed_Systems/Assignments/Assignment1/Tasks/app" external.root.project.path="$MODULE_DIR$/../../../Tasks" external.system.id="GRADLE" external.system.module.group="Tasks" external.system.module.version="unspecified" type="JAVA_MODULE" version="4">
+  <component name="NewModuleRootManager" LANGUAGE_LEVEL="JDK_17" inherit-compiler-output="true">
+    <exclude-output />
+    <content url="file://$MODULE_DIR$/../../../../../../../../../../../OneDrive-Persönlich/Documents/Uni_St.Gallen/BCS/3.Semester/Distributed_Systems/Assignments/Assignment1/Tasks/app">
+      <excludeFolder url="file://$MODULE_DIR$/../../../../../../../../../../../OneDrive-Persönlich/Documents/Uni_St.Gallen/BCS/3.Semester/Distributed_Systems/Assignments/Assignment1/Tasks/app/.gradle" />
+      <excludeFolder url="file://$MODULE_DIR$/../../../../../../../../../../../OneDrive-Persönlich/Documents/Uni_St.Gallen/BCS/3.Semester/Distributed_Systems/Assignments/Assignment1/Tasks/app/build" />
+    </content>
+    <orderEntry type="inheritedJdk" />
+    <orderEntry type="sourceFolder" forTests="false" />
+  </component>
+</module>
